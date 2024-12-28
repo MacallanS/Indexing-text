@@ -43,11 +43,10 @@ class StatisticAnswerChooser(private val dao: DAO) : AnswerChooser {
     }
 
     private fun getSynonymsForWord(word: String): List<String> {
-        return when (word) {
-            "забежать" -> listOf("пройти", "дойти")
-            "добежать" -> listOf("пройти", "дойти")
-            else -> listOf(word)
-        }
+        val query = "SELECT connected_word FROM words WHERE word = '$word'"
+        val list =  dao.queryExecute(query, "connected_word", QueryTypes.SELECT)
+
+        return list?.toSet()?.toList() ?: listOf(word)
     }
 
     override fun setThresholdValue(value: Double) {
