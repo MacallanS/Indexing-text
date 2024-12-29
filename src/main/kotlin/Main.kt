@@ -1,8 +1,14 @@
 import implementations.ThesaurusAnswerChooser
 import interfaces.AnswerChooser
+import utils.XmlSelector
 
 fun main() {
     val answerChooser: AnswerChooser = ThesaurusAnswerChooser()
 
-    println(answerChooser.getAnswer("Как пройти в библиотеку"))
+//    val query = "ГАРПУННАЯ ОХОТА"
+//    val query = "вычитка текста"
+    val query = "ГИЛЬЗА ОТ ПУЛИ"
+
+
+    println(answerChooser.getAnswer(query))
 }
