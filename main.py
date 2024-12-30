@@ -1,14 +1,13 @@
 import nltk
+import numpy as np
 from nltk.stem.lancaster import LancasterStemmer
 import numpy
 import tflearn
 import tensorflow
 import random
 import json
-from fastapi import FastAPI
 
 stemmer = LancasterStemmer()
-app = FastAPI()
 
 with open('intents.json') as file:
     data = json.load(file)
@@ -18,8 +17,63 @@ labels = []
 docs_x = []
 docs_y = []
 
+for intent in data['intents']:
+    for pattern in intent['patterns']:
+        wrds = nltk.word_tokenize(pattern)  # Tokenize each word
+        words.extend(wrds)
+        docs_x.append(wrds)
+        docs_y.append(intent["tag"])
 
-@app.get("/stud")
+    if intent['tag'] not in labels:
+        labels.append(intent["tag"])
+
+words = [stemmer.stem(w.lower()) for w in words if w != "?"]
+words = sorted(list(set(words)))
+
+labels = sorted(labels)
+
+# Create training data
+training = []
+output = []
+
+out_empty = [0 for _ in range(len(labels))]
+
+for x, doc in enumerate(docs_x):
+    bag = []
+
+    wrds = [stemmer.stem(w.lower()) for w in doc]
+
+    for w in words:
+        if w in wrds:
+            bag.append(1)
+        else:
+            bag.append(0)
+
+    output_row = out_empty[:]
+    output_row[labels.index(docs_y[x])] = 1
+
+    training.append(bag)
+    output.append(output_row)
+
+training = np.array(training)
+output = np.array(output)
+
+# Build the model
+tensorflow.compat.v1.reset_default_graph()
+
+net = tflearn.input_data(shape=[None, len(training[0])])
+net = tflearn.fully_connected(net, 8)
+net = tflearn.fully_connected(net, 8)
+net = tflearn.fully_connected(net, len(output[0]), activation="softmax")
+net = tflearn.regression(net)
+
+model = tflearn.DNN(net)
+
+# Train the model
+model.fit(training, output, n_epoch=1500, batch_size=8, show_metric=True)
+model.save("model.tflearn")
+
+
 def stud():
     global words
     global labels
@@ -46,7 +100,7 @@ def stud():
 
     for x, doc in enumerate(docs_x):
         bag = []
-        wrds = [stemmer.stem(w) for w in doc]
+        words = [stemmer.stem(w) for w in doc]
         for w in words:
             if w in words:
                 bag.append(1)
@@ -93,9 +147,8 @@ def chat():
         if inp.lower() == 'quit':
             break
 
-        model = tflearn.DNN.load(model_file="model.tflearn")
         results = model.predict([bag_of_words(inp, words)])
-        results_index = numpy.argmax(results)
+        results_index = np.argmax(results)
         tag = labels[results_index]
 
         for tg in data['intents']:
